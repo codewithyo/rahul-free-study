@@ -14,7 +14,7 @@ export default function Home() {
             Education for <span className="text-blue-500">Everyone</span>, Everywhere.
           </h1>
           <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10">
-            Access high-quality study materials, live lectures, and DPPs from India's top educators. Start your journey to success with Rahul-free-study.
+            Access high-quality study materials, live lectures, and DPPs from India&apos;s top educators. Start your journey to success with Rahul-free-study.
           </p>
           
           <div className="flex flex-col md:flex-row items-center justify-center gap-4">
@@ -29,7 +29,7 @@ export default function Home() {
 
         {/* Feature Grid */}
         <div className="grid md:grid-cols-3 gap-8 mt-32">
-          <div className="bg-slate-900/50 p-8 rounded-2xl border border-slate-800 backdrop-blur-sm">
+          <div className="bg-slate-900/50 p-8 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-xl hover:border-blue-500/30 transition-all">
             <div className="bg-blue-600/20 w-12 h-12 rounded-lg flex items-center justify-center mb-6 text-blue-500">
               <GraduationCap className="w-6 h-6" />
             </div>
@@ -37,15 +37,15 @@ export default function Home() {
             <p className="text-slate-400">Learn from the best educators in India with years of experience in competitive exams.</p>
           </div>
           
-          <div className="bg-slate-900/50 p-8 rounded-2xl border border-slate-800 backdrop-blur-sm">
+          <div className="bg-slate-900/50 p-8 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-xl hover:border-purple-500/30 transition-all">
             <div className="bg-purple-600/20 w-12 h-12 rounded-lg flex items-center justify-center mb-6 text-purple-500">
               <PlayCircle className="w-6 h-6" />
             </div>
             <h3 className="text-xl font-bold mb-3">Live & Recorded</h3>
-            <p className="text-slate-400">Missed a class? Don't worry. Access recorded sessions anytime, anywhere on any device.</p>
+            <p className="text-slate-400">Missed a class? Don&apos;t worry. Access recorded sessions anytime, anywhere on any device.</p>
           </div>
 
-          <div className="bg-slate-900/50 p-8 rounded-2xl border border-slate-800 backdrop-blur-sm">
+          <div className="bg-slate-900/50 p-8 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-xl hover:border-green-500/30 transition-all">
             <div className="bg-green-600/20 w-12 h-12 rounded-lg flex items-center justify-center mb-6 text-green-500">
               <ShieldCheck className="w-6 h-6" />
             </div>
