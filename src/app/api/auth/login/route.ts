@@ -4,10 +4,10 @@ import axios from "axios";
 export async function POST(req: Request) {
   try {
     const { phone } = await req.json();
-    const API_BASE = (process.env.PW_API_BASE || "https://api.penpencil.co").replace(/\/$/, "");
-    const CLIENT_ID = process.env.PW_CLIENT_ID || "5eb393ee95fab7468a79d189";
+    const API_BASE = "https://api.penpencil.co";
+    const CLIENT_ID = "5eb393ee95fab7468a79d189";
 
-    // PWSphere uses /v1/users/login-otp but sometimes PW requires v2
+    // PWSphere uses /api/auth/login which calls PW's /v1/users/login-otp
     const response = await axios.post(
       `${API_BASE}/v1/users/login-otp`,
       {
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       {
         headers: {
           "Content-Type": "application/json",
-          "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+          "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
           "client-id": CLIENT_ID,
           "version": "46"
         },
@@ -27,9 +27,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: response.data });
   } catch (error: any) {
-    console.error("OTP Proxy Error:", error.response?.data || error.message);
+    console.error("Login Error:", error.response?.data || error.message);
     return NextResponse.json(
-      { success: false, message: error.response?.data?.message || "OTP endpoint error" },
+      { success: false, message: error.response?.data?.message || "Login service error" },
       { status: 500 }
     );
   }

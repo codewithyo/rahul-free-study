@@ -20,8 +20,8 @@ export default function Login() {
     setLoading(true);
     setError("");
     try {
-      // API call to our proxy backend (will create next)
-      const res = await axios.post("/api/auth/send-otp", { phone });
+      // API call to our proxy backend
+      const res = await axios.post("/api/auth/login", { phone });
       if (res.data.success) {
         setStep(2);
       } else {
