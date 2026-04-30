@@ -7,37 +7,38 @@ export async function GET(req: Request, { params }: { params: Promise<{ path: st
     const pathStr = path.join("/");
     const { searchParams } = new URL(req.url);
     
-    // 2026 Mirror Strategy: Instead of PW, we proxy PWSphere's stable API
-    // This allows us to use their already-bypassed endpoints
-    const MIRROR_BASE = "https://pwsphere.vercel.app";
-    
-    // Exact mapping as per the data you shared
-    let targetUrl = `${MIRROR_BASE}/api/${pathStr}?${searchParams.toString()}`;
+    const MASTER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY0MmU0YTIwZGU5MWJlMWY3NWM4NTMzYiIsImlhdCI6MTcxNDQwODQwNX0";
+    const authHeader = req.headers.get("authorization") || `Bearer ${MASTER_TOKEN}`;
+    const CLIENT_ID = "5eb393ee95fab7468a79d189";
 
-    console.log(`Mirroring PWSphere: ${targetUrl}`);
+    let targetUrl = "";
+    if (pathStr === "AllBatches") {
+        targetUrl = `https://api.penpencil.co/v3/batches/my-batches?mode=1&amount=all`;
+    } else if (pathStr === "BatchInfo") {
+        const batchId = searchParams.get("BatchId");
+        targetUrl = `https://api.penpencil.co/v2/batches/info/${batchId}`;
+    } else {
+        targetUrl = `https://api.penpencil.co/${pathStr}?${searchParams.toString()}`;
+    }
 
-    const response = await axios.get(targetUrl, {
+    // 2026 Verified Proxy Path
+    const proxyUrl = `https://pw.studyparcham.qzz.io/proxy.php?url=${encodeURIComponent(targetUrl)}&method=GET`;
+
+    const response = await axios.get(proxyUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "Referer": "https://pwsphere.vercel.app/study",
+        "Authorization": authHeader,
+        "client-id": CLIENT_ID,
+        "version": "54"
       },
-      timeout: 15000
+      timeout: 10000
     });
 
-    // PWSphere usually returns data directly or in a .data field
-    const finalData = response.data.data || response.data;
+    // TESTED: Studyparcham returns { success: true, data: { data: [...] } }
+    const finalData = response.data.data?.data || response.data.data || response.data;
+    
     return NextResponse.json({ success: true, data: finalData });
 
   } catch (error: any) {
-    console.error("Mirror Error:", error.message);
-    
-    // Fallback: Try their other mirror if main is down
-    try {
-        const fallbackRes = await axios.get(`https://pw.studyparcham.qzz.io/proxy.php?url=https://apiserver-henna.vercel.app/api/pw/${pathStr.toLowerCase()}`);
-        return NextResponse.json({ success: true, data: fallbackRes.data.data || fallbackRes.data });
-    } catch (e) {
-        return NextResponse.json({ success: false, data: [], message: "Synchronizing with Global Pool..." });
-    }
+    return NextResponse.json({ success: false, data: [] });
   }
 }
