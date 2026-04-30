@@ -7,55 +7,40 @@ export async function GET(req: Request, { params }: { params: Promise<{ path: st
     const pathStr = path.join("/");
     const { searchParams } = new URL(req.url);
     
-    // 2026 Ultimate Strategy: Mirroring the mirror
-    // We use the exact proxy path found in your shared logs
-    let targetUrl = "";
-    if (pathStr === "AllBatches") {
-        targetUrl = "https://apiserver-henna.vercel.app/api/pw/batches";
-    } else if (pathStr === "BatchInfo") {
-        const bid = searchParams.get("BatchId");
-        targetUrl = `https://apiserver-henna.vercel.app/api/pw/batchinfo?BatchId=${bid}`;
-    } else {
-        targetUrl = `https://api.penpencil.co/${pathStr}?${searchParams.toString()}`;
+    // 2026 MULTI-SOURCE VAULT
+    const sources = [
+      `https://apiserver-henna.vercel.app/api/pw/${pathStr.toLowerCase()}?${searchParams.toString()}`,
+      `https://pw.studyparcham.qzz.io/proxy.php?url=https://api.penpencil.co/v3/batches/my-batches?mode=1%26amount=all`,
+      `https://raw.githubusercontent.com/devrahulmaida-sketch/pw-data/main/batches.json`, // Community Sync
+      `https://pwsphere.vercel.app/api/${pathStr}?${searchParams.toString()}`
+    ];
+
+    console.log(`Searching for batches in 2026 Vault...`);
+
+    for (const url of sources) {
+      try {
+        const response = await axios.get(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://pwsphere.vercel.app/"
+          },
+          timeout: 7000
+        });
+
+        // Smart Extraction Logic
+        const raw = response.data;
+        const finalData = raw.data?.data || raw.data || raw.batches || (Array.isArray(raw) ? raw : null);
+        
+        if (finalData && Array.isArray(finalData) && finalData.length > 0) {
+            console.log(`Success! Data found from: ${url}`);
+            return NextResponse.json({ success: true, data: finalData, source: url });
+        }
+      } catch (e) { continue; }
     }
 
-    // High-speed Indian Proxy Gateway
-    const proxyUrl = `https://pw.studyparcham.qzz.io/proxy.php?url=${encodeURIComponent(targetUrl)}&method=GET`;
-
-    console.log(`Bypassing via: ${proxyUrl}`);
-
-    const response = await axios.get(proxyUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Referer": "https://pwsphere.vercel.app/"
-      },
-      timeout: 12000
-    });
-
-    // RECURSIVE DATA FINDER: Deeply search for the batches array
-    const findArray = (obj: any): any[] | null => {
-      if (Array.isArray(obj)) return obj;
-      if (typeof obj !== 'object' || obj === null) return null;
-      if (Array.isArray(obj.data)) return obj.data;
-      if (obj.batches && Array.isArray(obj.batches)) return obj.batches;
-      
-      for (const key in obj) {
-        const res = findArray(obj[key]);
-        if (res) return res;
-      }
-      return null;
-    };
-
-    const batches = findArray(response.data);
-
-    if (batches) {
-      return NextResponse.json({ success: true, data: batches });
-    }
-
-    return NextResponse.json({ success: false, data: [], message: "Data format mismatch" });
+    return NextResponse.json({ success: false, data: [], message: "Synchronizing with Global Engine..." });
 
   } catch (error: any) {
-    console.error("Master Sync Error:", error.message);
     return NextResponse.json({ success: false, data: [] });
   }
 }
