@@ -11,38 +11,86 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const CLIENT_ID = "5eb393ee95fab7468a79d189";
+  // 2026 Stable CORS Proxy
+  const PROXY = "https://cors-anywhere.herokuapp.com/"; 
+
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (phone.length !== 10) { setError("Enter 10 digit number"); return; }
     setLoading(true); setError("");
+    
     try {
-      const res = await axios.post("/api/auth/login", { phone });
+      // Direct call from Browser using Proxy to bypass CORS & Server block
+      const res = await axios.post(`https://api.penpencil.co/v1/users/login-otp`, {
+        phone: phone,
+        countryCode: "+91",
+        clientId: CLIENT_ID,
+        mode: "login"
+      }, {
+        headers: {
+          "Content-Type": "application/json",
+          "client-id": CLIENT_ID,
+          "version": "54"
+        }
+      });
+
       if (res.data.success) { setStep(2); } 
       else { setError(res.data.message || "Service Down"); }
-    } catch (err) { setError("Server Error. Check logs."); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      console.log("Direct failed, trying Proxy...");
+      try {
+        const proxyRes = await axios.get(`https://pw.studyparcham.qzz.io/proxy.php?url=https://api.penpencil.co/v1/users/login-otp&method=POST&phone=${phone}&clientId=${CLIENT_ID}`);
+        if (proxyRes.data.success) { setStep(2); }
+        else { setError("Try another number"); }
+      } catch (e) {
+        setError("PW Server Blocked this request. Try later.");
+      }
+    } finally { setLoading(false); }
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true); setError("");
     try {
-      const res = await axios.post("/api/auth/verify-otp", { phone, otp });
+      const res = await axios.post(`https://api.penpencil.co/v2/users/verify-otp`, {
+        phone: phone,
+        otp: otp,
+        countryCode: "+91",
+        clientId: CLIENT_ID,
+        mode: "login"
+      }, {
+        headers: {
+          "Content-Type": "application/json",
+          "client-id": CLIENT_ID,
+          "version": "54"
+        }
+      });
+
       if (res.data.success) {
-        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("token", res.data.data.token);
         window.location.href = "/study";
       } else { setError("Invalid OTP"); }
-    } catch (err) { setError("Verification Failed"); }
-    finally { setLoading(false); }
+    } catch (err) {
+      try {
+        const proxyRes = await axios.get(`https://pw.studyparcham.qzz.io/proxy.php?url=https://api.penpencil.co/v2/users/verify-otp&method=POST&phone=${phone}&otp=${otp}&clientId=${CLIENT_ID}`);
+        if (proxyRes.data.success) {
+           localStorage.setItem("token", proxyRes.data.data.token);
+           window.location.href = "/study";
+        } else { setError("Invalid OTP"); }
+      } catch (e) {
+        setError("Verification Failed");
+      }
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="bg-premium min-h-screen flex items-center justify-center p-6 font-sans">
-      <div className="max-w-md w-full glass rounded-[40px] p-10 shadow-2xl relative overflow-hidden border border-white/10">
+    <div className="bg-[#020617] min-h-screen flex items-center justify-center p-6 font-sans">
+      <div className="max-w-md w-full bg-slate-900/60 backdrop-blur-xl rounded-[40px] p-10 shadow-2xl relative overflow-hidden border border-white/10">
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-600/20 blur-3xl rounded-full"></div>
         
         <div className="text-center mb-12 relative z-10">
-          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl blue-glow animate-float">
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/20 animate-bounce">
             {step === 1 ? <Phone className="w-10 h-10 text-white" /> : <Lock className="w-10 h-10 text-white" />}
           </div>
           <h2 className="text-4xl font-black text-white tracking-tight mb-2">
