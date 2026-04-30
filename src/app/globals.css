@@ -15,7 +15,7 @@ body {
   background-image: 
     radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
     radial-gradient(at 100% 0%, rgba(147, 51, 234, 0.15) 0px, transparent 50%);
-  min-h-screen;
+  min-height: 100vh;
 }
 
 .glass-card {
