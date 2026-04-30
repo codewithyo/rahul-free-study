@@ -6,44 +6,56 @@ export async function GET(req: Request, { params }: { params: Promise<{ path: st
     const { path } = await params;
     const pathStr = path.join("/");
     const { searchParams } = new URL(req.url);
-    const query = searchParams.toString();
     
-    // 2026 Ultimate Strategy: Mirror PWSphere's High-Speed Henna Server
-    // This server is built specifically to handle massive traffic and bypass all PW blocks
+    // 2026 Ultimate Strategy: Mirroring the mirror
+    // We use the exact proxy path found in your shared logs
     let targetUrl = "";
-    
     if (pathStr === "AllBatches") {
-        targetUrl = `https://apiserver-henna.vercel.app/api/pw/batches`;
+        targetUrl = "https://apiserver-henna.vercel.app/api/pw/batches";
     } else if (pathStr === "BatchInfo") {
-        const batchId = searchParams.get("BatchId");
-        targetUrl = `https://apiserver-henna.vercel.app/api/pw/batchinfo?BatchId=${batchId}`;
+        const bid = searchParams.get("BatchId");
+        targetUrl = `https://apiserver-henna.vercel.app/api/pw/batchinfo?BatchId=${bid}`;
     } else {
-        // Fallback for other resources (Subjects, Lectures)
-        targetUrl = `https://apiserver-henna.vercel.app/api/pw/${pathStr.toLowerCase()}?${query}`;
+        targetUrl = `https://api.penpencil.co/${pathStr}?${searchParams.toString()}`;
     }
 
-    console.log(`Mirroring Henna Server: ${targetUrl}`);
+    // High-speed Indian Proxy Gateway
+    const proxyUrl = `https://pw.studyparcham.qzz.io/proxy.php?url=${encodeURIComponent(targetUrl)}&method=GET`;
 
-    const response = await axios.get(targetUrl, {
+    console.log(`Bypassing via: ${proxyUrl}`);
+
+    const response = await axios.get(proxyUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
-        "Referer": "https://pwsphere.vercel.app/",
-        "Origin": "https://pwsphere.vercel.app"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://pwsphere.vercel.app/"
       },
-      timeout: 10000
+      timeout: 12000
     });
 
-    // Handle nested data structures correctly
-    // Henna returns: { success: true, data: [...] } OR { success: true, data: { data: [...] } }
-    const result = response.data.data || response.data;
-    
-    return NextResponse.json({ 
-        success: true, 
-        data: result.data || result 
-    });
+    // RECURSIVE DATA FINDER: Deeply search for the batches array
+    const findArray = (obj: any): any[] | null => {
+      if (Array.isArray(obj)) return obj;
+      if (typeof obj !== 'object' || obj === null) return null;
+      if (Array.isArray(obj.data)) return obj.data;
+      if (obj.batches && Array.isArray(obj.batches)) return obj.batches;
+      
+      for (const key in obj) {
+        const res = findArray(obj[key]);
+        if (res) return res;
+      }
+      return null;
+    };
+
+    const batches = findArray(response.data);
+
+    if (batches) {
+      return NextResponse.json({ success: true, data: batches });
+    }
+
+    return NextResponse.json({ success: false, data: [], message: "Data format mismatch" });
 
   } catch (error: any) {
-    console.error("Henna Mirror Failed:", error.message);
-    return NextResponse.json({ success: false, data: [], message: "Syncing..." });
+    console.error("Master Sync Error:", error.message);
+    return NextResponse.json({ success: false, data: [] });
   }
 }
