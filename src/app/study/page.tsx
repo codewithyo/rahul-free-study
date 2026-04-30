@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Search, Sparkles, LayoutGrid, GraduationCap, Loader2, AlertCircle } from "lucide-react";
+import { Search, Sparkles, GraduationCap, Loader2, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -13,51 +13,36 @@ export default function Study() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchBatchesLocally = async () => {
+    const fetchPortalData = async () => {
       try {
-        // 2026 Strategy: Fetching direct from Browser (Bypasses Vercel IP block)
-        // We try 3 different sources until one works
-        const sources = [
-          "https://apiserver-henna.vercel.app/api/pw/batches",
-          "https://pw.studyparcham.qzz.io/proxy.php?url=https://api.penpencil.co/v3/batches/my-batches?mode=1%26amount=all",
-          "https://raw.githubusercontent.com/devrahulmaida-sketch/pw-data/main/batches.json"
-        ];
-
-        let dataFound = false;
-        for (const url of sources) {
-          try {
-            const res = await axios.get(url, { timeout: 8000 });
-            const data = res.data.data?.data || res.data.data || res.data;
-            if (Array.isArray(data) && data.length > 0) {
-              setBatches(data);
-              dataFound = true;
-              break;
-            }
-          } catch (e) { continue; }
-        }
-
-        if (!dataFound) {
-           setError("PW Engine is slow today. Retrying...");
-           setTimeout(fetchBatchesLocally, 5000);
+        // Call our INTERNAL server route to avoid CORS errors
+        const res = await axios.get("/api/AllBatches");
+        if (res.data.success && res.data.data.length > 0) {
+          setBatches(res.data.data);
+        } else {
+          setError("Synchronizing Global Library...");
+          // Background retry
+          setTimeout(fetchPortalData, 5000);
         }
       } catch (err) {
-        console.error("Critical Sync Error");
+        setError("Retrying connection...");
+        setTimeout(fetchPortalData, 5000);
       } finally {
         setLoading(false);
       }
     };
-    fetchBatchesLocally();
+    fetchPortalData();
   }, []);
 
   const filteredBatches = batches.filter(batch => 
     batch.name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading) return (
+  if (loading && batches.length === 0) return (
     <div className="bg-[#020617] min-h-screen flex items-center justify-center font-sans">
       <div className="text-center">
-        <Loader2 className="w-16 h-16 text-blue-500 animate-spin mx-auto mb-6 shadow-[0_0_40px_rgba(59,130,246,0.3)]" />
-        <h2 className="text-xl font-black text-white tracking-[0.2em] animate-pulse uppercase">Connecting to Indian Node...</h2>
+        <div className="w-24 h-24 border-t-4 border-blue-600 rounded-full animate-spin mx-auto mb-10 shadow-[0_0_50px_rgba(59,130,246,0.5)]"></div>
+        <h2 className="text-2xl font-black text-white tracking-[0.3em] animate-pulse">INITIATING HYPER-SYNC...</h2>
       </div>
     </div>
   );
@@ -66,65 +51,71 @@ export default function Study() {
     <div className="bg-[#020617] min-h-screen pb-20 selection:bg-blue-600/30">
       <div className="max-w-[1600px] mx-auto px-6 py-10">
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
-          <div className="lg:col-span-2 bg-gradient-to-br from-blue-600 to-indigo-900 rounded-[48px] p-12 text-white relative overflow-hidden shadow-2xl border border-white/10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-20">
+          <div className="lg:col-span-2 bg-gradient-to-br from-blue-600 to-indigo-900 rounded-[60px] p-16 text-white relative overflow-hidden shadow-2xl border border-white/5">
              <div className="relative z-10">
-                <h1 className="text-6xl font-black mb-6 tracking-tighter uppercase">Unlimited <br/>Access.</h1>
-                <p className="text-blue-100 text-xl font-medium max-w-xl opacity-80 leading-relaxed mb-10">Synced directly with PWSphere VIP Engine. No login required.</p>
+                <h1 className="text-7xl font-black mb-8 tracking-tighter leading-[0.8] uppercase">Premium <br/>Content. <br/>Unlocked.</h1>
+                <p className="text-blue-100 text-xl font-medium max-w-lg opacity-80 mb-10 leading-relaxed">No login, No limits. Directly synced with PWSphere VIP Node.</p>
                 <div className="flex gap-4">
-                   <div className="bg-white/10 backdrop-blur-xl px-8 py-4 rounded-3xl border border-white/10 flex items-center gap-3">
-                      <LayoutGrid className="w-6 h-6 text-blue-300" />
-                      <span className="font-black text-lg tracking-widest uppercase">{batches.length} Batches Live</span>
+                   <div className="bg-white/10 backdrop-blur-xl px-8 py-5 rounded-[28px] border border-white/10 flex items-center gap-4 shadow-2xl">
+                      <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse shadow-[0_0_20px_#22c55e]"></div>
+                      <span className="font-black text-lg tracking-wider uppercase">Online: {batches.length} Batches</span>
                    </div>
                 </div>
              </div>
-             <Sparkles className="absolute right-[-40px] top-[-40px] w-80 h-80 opacity-10 animate-float" />
+             <Sparkles className="absolute right-[-40px] top-[-40px] w-96 h-96 opacity-10 animate-float" />
           </div>
 
-          <div className="bg-slate-900/60 backdrop-blur-3xl border border-white/5 rounded-[48px] p-10 flex flex-col justify-center">
-             <h2 className="text-2xl font-black mb-8 flex items-center gap-3 uppercase tracking-widest text-blue-500">Search Box</h2>
-             <input
-                type="text"
-                placeholder="Find your course..."
-                className="w-full bg-slate-950 border border-white/5 rounded-[32px] py-6 px-10 focus:ring-4 focus:ring-blue-600/30 outline-none transition-all font-black text-xl text-white placeholder:text-slate-800"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+          <div className="bg-slate-900/60 backdrop-blur-3xl border border-white/5 rounded-[60px] p-12 flex flex-col justify-center shadow-inner relative overflow-hidden">
+             <h2 className="text-3xl font-black mb-10 flex items-center gap-4 uppercase tracking-widest text-blue-500">
+                Portal Search
+             </h2>
+             <div className="relative mb-10">
+                <input
+                    type="text"
+                    placeholder="Search courses..."
+                    className="w-full bg-slate-950 border border-white/10 rounded-[32px] py-7 px-10 focus:ring-4 focus:ring-blue-600/30 outline-none transition-all font-black text-xl text-white placeholder:text-slate-700 shadow-2xl"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
+             </div>
           </div>
         </div>
 
-        {error && (
-            <div className="mb-12 bg-blue-500/10 border border-blue-500/20 p-6 rounded-3xl flex items-center gap-4 text-blue-400 font-black justify-center animate-pulse tracking-widest uppercase">
-                <AlertCircle className="w-6 h-6" /> {error}
+        {error && batches.length === 0 && (
+            <div className="mb-12 bg-blue-500/5 border border-blue-500/20 p-8 rounded-[40px] flex flex-col items-center gap-4 text-blue-400 font-bold justify-center animate-pulse">
+                <Loader2 className="w-10 h-10 animate-spin" />
+                <span className="text-xl tracking-widest uppercase">{error}</span>
             </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-10 px-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-12 px-2">
             {filteredBatches.map((batch: any) => (
               <Link 
                 href={`/study/batches/${batch._id}`} 
                 key={batch._id}
-                className="group relative bg-[#0f172a]/60 border border-white/5 rounded-[56px] overflow-hidden transition-all duration-700 hover:scale-[1.03] hover:border-blue-500/30 hover:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5)]"
+                className="group relative bg-[#0f172a]/60 border border-white/5 rounded-[64px] overflow-hidden transition-all duration-700 hover:scale-[1.05] hover:border-blue-500/40 hover:shadow-[0_60px_120px_-30px_rgba(0,0,0,0.6)]"
               >
-                <div className="relative h-64 w-full">
+                <div className="relative h-72 w-full overflow-hidden">
                   <Image
                     src={batch.previewImage || "https://static.pw.live/5eb393ee95fab7468a79d189/ADMIN/760dd986-5030-48dd-8ae3-3daeb0244b65.png"}
                     alt={batch.name}
                     fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-1000"
+                    className="object-cover group-hover:scale-150 transition-transform duration-[3000ms]"
                     unoptimized
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-80"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-90"></div>
                 </div>
                 
-                <div className="p-10 text-center md:text-left">
-                  <h3 className="text-xl font-black mb-3 line-clamp-1 group-hover:text-blue-400 transition-colors uppercase tracking-tight">{batch.name}</h3>
-                  <div className="flex items-center justify-between pt-8 border-t border-white/5">
-                    <div className="flex items-center gap-3 text-slate-500 font-black text-[10px] uppercase tracking-widest">
-                       <GraduationCap className="w-5 h-5 text-blue-500" /> PREMIUM
+                <div className="p-10">
+                  <h3 className="text-3xl font-black mb-6 line-clamp-1 group-hover:text-blue-400 transition-colors tracking-tighter uppercase">{batch.name}</h3>
+                  
+                  <div className="flex items-center justify-between pt-10 border-t border-white/5">
+                    <div className="flex items-center gap-4 text-slate-400 font-black text-[10px] uppercase tracking-widest">
+                       <GraduationCap className="w-7 h-7 text-blue-500" /> SYNCED SYSTEM
                     </div>
-                    <div className="bg-blue-600 p-4 rounded-2xl text-white shadow-xl group-hover:rotate-[360deg] transition-all duration-700">
-                      <Sparkles className="w-6 h-6 fill-current" />
+                    <div className="bg-blue-600 p-5 rounded-[28px] text-white shadow-2xl shadow-blue-600/40 group-hover:rotate-[360deg] transition-all duration-[2000ms] transform group-hover:scale-125">
+                      <Sparkles className="w-8 h-8 fill-current text-white" />
                     </div>
                   </div>
                 </div>
