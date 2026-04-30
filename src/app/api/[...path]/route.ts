@@ -7,38 +7,50 @@ export async function GET(req: Request, { params }: { params: Promise<{ path: st
     const pathStr = path.join("/");
     const { searchParams } = new URL(req.url);
     
-    // 2026 MULTI-SOURCE VAULT
-    const sources = [
-      `https://apiserver-henna.vercel.app/api/pw/${pathStr.toLowerCase()}?${searchParams.toString()}`,
-      `https://pw.studyparcham.qzz.io/proxy.php?url=https://api.penpencil.co/v3/batches/my-batches?mode=1%26amount=all`,
-      `https://raw.githubusercontent.com/devrahulmaida-sketch/pw-data/main/batches.json`, // Community Sync
-      `https://pwsphere.vercel.app/api/${pathStr}?${searchParams.toString()}`
-    ];
+    // 2026 Stealth Strategy: Master Token + Indian Node Relay
+    const MASTER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY0MmU0YTIwZGU5MWJlMWY3NWM4NTMzYiIsImlhdCI6MTcxNDQwODQwNX0";
+    const authHeader = req.headers.get("authorization") || `Bearer ${MASTER_TOKEN}`;
+    const CLIENT_ID = "5eb393ee95fab7468a79d189";
 
-    console.log(`Searching for batches in 2026 Vault...`);
-
-    for (const url of sources) {
-      try {
-        const response = await axios.get(url, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Referer": "https://pwsphere.vercel.app/"
-          },
-          timeout: 7000
-        });
-
-        // Smart Extraction Logic
-        const raw = response.data;
-        const finalData = raw.data?.data || raw.data || raw.batches || (Array.isArray(raw) ? raw : null);
-        
-        if (finalData && Array.isArray(finalData) && finalData.length > 0) {
-            console.log(`Success! Data found from: ${url}`);
-            return NextResponse.json({ success: true, data: finalData, source: url });
-        }
-      } catch (e) { continue; }
+    let targetUrl = "";
+    if (pathStr === "AllBatches") {
+        targetUrl = `https://api.penpencil.co/v3/batches/my-batches?mode=1&amount=all`;
+    } else if (pathStr === "BatchInfo") {
+        const bid = searchParams.get("BatchId");
+        targetUrl = `https://api.penpencil.co/v2/batches/info/${bid}`;
+    } else {
+        targetUrl = `https://api.penpencil.co/${pathStr}?${searchParams.toString()}`;
     }
 
-    return NextResponse.json({ success: false, data: [], message: "Synchronizing with Global Engine..." });
+    // Tigdam: Instead of calling PW directly, we use a public CORS-Gateway
+    // which has Indian IP rotation. This is what PWSphere does for free.
+    const relayGateways = [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
+        `https://pw.studyparcham.qzz.io/proxy.php?url=${encodeURIComponent(targetUrl)}&method=GET`,
+        targetUrl
+    ];
+
+    for (const gate of relayGateways) {
+        try {
+            const response = await axios.get(gate, {
+                headers: {
+                    "Authorization": authHeader,
+                    "client-id": CLIENT_ID,
+                    "version": "54",
+                    "User-Agent": "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                },
+                timeout: 8000
+            });
+
+            // Data extraction from different proxy formats
+            const finalData = response.data.data?.data || response.data.data || response.data;
+            if (finalData) {
+                return NextResponse.json({ success: true, data: finalData });
+            }
+        } catch (e) { continue; }
+    }
+
+    return NextResponse.json({ success: false, data: [] });
 
   } catch (error: any) {
     return NextResponse.json({ success: false, data: [] });
