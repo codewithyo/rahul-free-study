@@ -8,40 +8,44 @@ export async function GET(req: Request, { params }: { params: Promise<{ path: st
     const { searchParams } = new URL(req.url);
     const queryString = searchParams.toString();
     
-    // Master Token (If user is not logged in, we use this or proxy)
-    const authHeader = req.headers.get("authorization") || process.env.MASTER_TOKEN;
+    const authHeader = req.headers.get("authorization");
     const CLIENT_ID = "5eb393ee95fab7468a79d189";
 
-    // 2026 Multi-Proxy Strategy
-    // Try 3 different proxy gateways to ensure 0% block rate
-    const proxies = [
-        `https://pw.studyparcham.qzz.io/proxy.php?url=https://api.penpencil.co/${pathStr}&${queryString}`,
-        `https://apiserver-henna.vercel.app/api/v1/${pathStr}?${queryString}`,
-        `https://api.penpencil.co/${pathStr}?${queryString}`
-    ];
-
-    let lastError;
-    for (const url of proxies) {
-        try {
-            console.log(`Trying Proxy: ${url}`);
-            const response = await axios.get(url, {
-                headers: {
-                    "Authorization": authHeader || "",
-                    "Client-Id": CLIENT_ID,
-                    "version": "54",
-                    "User-Agent": "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-                },
-                timeout: 5000
-            });
-            return NextResponse.json(response.data);
-        } catch (e: any) {
-            lastError = e;
-            continue; // Try next proxy
-        }
+    // PWSphere 2026 Strategy: Use their HIGH-SPEED Proxy Directly
+    // This proxy has rotating residential IPs in India
+    let targetUrl = "";
+    
+    if (pathStr === "AllBatches") {
+        targetUrl = `https://api.penpencil.co/v3/batches/my-batches?mode=1&amount=all`;
+    } else {
+        targetUrl = `https://api.penpencil.co/${pathStr}?${queryString}`;
     }
 
-    throw lastError;
+    // Try through Studyparcham Proxy (Most Stable in 2026)
+    try {
+        const proxyUrl = `https://pw.studyparcham.qzz.io/proxy.php?url=${encodeURIComponent(targetUrl)}&method=GET`;
+        const response = await axios.get(proxyUrl, {
+            headers: {
+                "Authorization": authHeader || "",
+                "client-id": CLIENT_ID,
+                "version": "54"
+            },
+            timeout: 8000
+        });
+        return NextResponse.json(response.data);
+    } catch (proxyErr) {
+        // Fallback to direct if proxy fails
+        const directRes = await axios.get(targetUrl, {
+            headers: {
+                "Authorization": authHeader || "",
+                "client-id": CLIENT_ID,
+                "version": "54"
+            }
+        });
+        return NextResponse.json(directRes.data);
+    }
+
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: "All proxies blocked. Try again in 1 min." }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Server Busy" }, { status: 500 });
   }
 }
