@@ -4,11 +4,10 @@ import axios from "axios";
 export async function POST(req: Request) {
   try {
     const { phone, otp } = await req.json();
-    const API_BASE = "https://api.penpencil.co";
     const CLIENT_ID = "5eb393ee95fab7468a79d189";
 
     const response = await axios.post(
-      `${API_BASE}/v2/users/verify-otp`,
+      "https://api.penpencil.co/v2/users/verify-otp",
       {
         phone: phone,
         otp: otp,
@@ -24,16 +23,13 @@ export async function POST(req: Request) {
           "version": "54",
           "origin": "https://www.physicswallah.live",
           "referer": "https://www.physicswallah.live/"
-        },
+        }
       }
     );
 
-    return NextResponse.json({ 
-      success: true, 
-      token: response.data.data.token 
-    });
+    const token = response.data.data.token;
+    return NextResponse.json({ success: true, token });
   } catch (error: any) {
-    console.error("Verify Error:", error.response?.data || error.message);
     return NextResponse.json(
       { success: false, message: error.response?.data?.message || "Invalid OTP" },
       { status: 500 }
