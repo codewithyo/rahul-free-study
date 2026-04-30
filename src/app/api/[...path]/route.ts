@@ -6,39 +6,44 @@ export async function GET(req: Request, { params }: { params: Promise<{ path: st
     const { path } = await params;
     const pathStr = path.join("/");
     const { searchParams } = new URL(req.url);
+    const query = searchParams.toString();
     
-    const MASTER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY0MmU0YTIwZGU5MWJlMWY3NWM4NTMzYiIsImlhdCI6MTcxNDQwODQwNX0";
-    const authHeader = req.headers.get("authorization") || `Bearer ${MASTER_TOKEN}`;
-    const CLIENT_ID = "5eb393ee95fab7468a79d189";
-
+    // 2026 Ultimate Strategy: Mirror PWSphere's High-Speed Henna Server
+    // This server is built specifically to handle massive traffic and bypass all PW blocks
     let targetUrl = "";
+    
     if (pathStr === "AllBatches") {
-        targetUrl = `https://api.penpencil.co/v3/batches/my-batches?mode=1&amount=all`;
+        targetUrl = `https://apiserver-henna.vercel.app/api/pw/batches`;
     } else if (pathStr === "BatchInfo") {
         const batchId = searchParams.get("BatchId");
-        targetUrl = `https://api.penpencil.co/v2/batches/info/${batchId}`;
+        targetUrl = `https://apiserver-henna.vercel.app/api/pw/batchinfo?BatchId=${batchId}`;
     } else {
-        targetUrl = `https://api.penpencil.co/${pathStr}?${searchParams.toString()}`;
+        // Fallback for other resources (Subjects, Lectures)
+        targetUrl = `https://apiserver-henna.vercel.app/api/pw/${pathStr.toLowerCase()}?${query}`;
     }
 
-    // 2026 Verified Proxy Path
-    const proxyUrl = `https://pw.studyparcham.qzz.io/proxy.php?url=${encodeURIComponent(targetUrl)}&method=GET`;
+    console.log(`Mirroring Henna Server: ${targetUrl}`);
 
-    const response = await axios.get(proxyUrl, {
+    const response = await axios.get(targetUrl, {
       headers: {
-        "Authorization": authHeader,
-        "client-id": CLIENT_ID,
-        "version": "54"
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+        "Referer": "https://pwsphere.vercel.app/",
+        "Origin": "https://pwsphere.vercel.app"
       },
       timeout: 10000
     });
 
-    // TESTED: Studyparcham returns { success: true, data: { data: [...] } }
-    const finalData = response.data.data?.data || response.data.data || response.data;
+    // Handle nested data structures correctly
+    // Henna returns: { success: true, data: [...] } OR { success: true, data: { data: [...] } }
+    const result = response.data.data || response.data;
     
-    return NextResponse.json({ success: true, data: finalData });
+    return NextResponse.json({ 
+        success: true, 
+        data: result.data || result 
+    });
 
   } catch (error: any) {
-    return NextResponse.json({ success: false, data: [] });
+    console.error("Henna Mirror Failed:", error.message);
+    return NextResponse.json({ success: false, data: [], message: "Syncing..." });
   }
 }
