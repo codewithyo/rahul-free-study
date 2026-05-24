@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Lock, Phone, ShieldCheck } from "lucide-react";
+import { ArrowRight, Lock, Phone } from "lucide-react";
 import axios from "axios";
+import { saveSession, getRandomId } from "../../lib/session";
 
 export default function Login() {
   const [phone, setPhone] = useState("");
@@ -24,16 +25,13 @@ export default function Login() {
     setLoading(true); setError("");
 
     try {
-      // Initial send uses default channel (server decides). smsType is only for resends.
       const res = await axios.post(`/api/auth/get-otp`, { phone });
       if (res.data.success) {
-        // prefer token field if provided
         const t = res.data.token || res.data.data?.data?.t || res.data.data?.t || null;
         if (t) setTokenId(t);
         setStep(2);
         setResendTimer(30);
         setMaskedPhone(phone.replace(/(\d{4})\d{3}(\d{3})/, "$1***$2"));
-        // countdown
         const id = setInterval(() => {
           setResendTimer((prev: number) => {
             if (prev <= 1) { clearInterval(id); return 0; }
@@ -44,7 +42,8 @@ export default function Login() {
         setError(res.data.message || 'Failed to request OTP');
       }
     } catch (e: any) {
-      setError('Unable to request OTP at this time.');
+      console.error('get-otp error', e?.response?.data || e?.message || e);
+      setError(e?.response?.data?.message || e?.message || 'Unable to request OTP at this time.');
     } finally { setLoading(false); }
   };
 
@@ -52,20 +51,29 @@ export default function Login() {
     e.preventDefault();
     setLoading(true); setError("");
     try {
-      // verify using tokenId if available
       const payload: any = { otp };
       if (tokenId) payload.token = tokenId;
-      else payload.username = phone; // support oauth-style verify by username when tokenId not provided
+      else payload.username = phone;
 
       const res = await axios.post(`/api/auth/verify-otp`, payload);
       if (res.data.success) {
-        // server sets cookie; redirect to study
-        window.location.href = '/study';
+          try {
+            // fetch user data from server (pw_token cookie should be set)
+            const me = await axios.get('/api/auth/me');
+            const user = me.data?.data || null;
+            saveSession(phone, user, getRandomId());
+          } catch (e: any) {
+            console.warn('Could not fetch user after verify', e?.response?.data || e?.message || e);
+          }
+          // redirect to study
+          window.location.href = '/study';
       } else {
+        console.error('verify-otp failed', res.data);
         setError(res.data.message || 'Invalid OTP');
       }
     } catch (e: any) {
-      setError('Verification failed');
+      console.error('verify-otp error', e?.response?.data || e?.message || e);
+      setError(e?.response?.data?.message || e?.message || 'Verification failed');
     } finally { setLoading(false); }
   };
 
@@ -76,12 +84,20 @@ export default function Login() {
     try {
       const res = await axios.post('/api/auth/token-login', { token: rawTokenInput });
       if (res.data.success) {
-        // cookie set by server, redirect
-        window.location.href = '/study';
+          try {
+            const me = await axios.get('/api/auth/me');
+            const user = me.data?.data || null;
+            // preserve mobile if we have it
+            saveSession(phone || null, user, getRandomId());
+          } catch (e: any) {
+            console.warn('Could not fetch user after token login', e?.response?.data || e?.message || e);
+          }
+          window.location.href = '/study';
       } else {
         setError(res.data.message || 'Token invalid');
       }
     } catch (err: any) {
+      console.error('token-login error', err?.response?.data || err?.message || err);
       setError(err?.response?.data?.message || err?.message || 'Token verification failed');
     } finally { setLoading(false); }
   };
@@ -101,7 +117,7 @@ export default function Login() {
           });
         }, 1000);
       } else setError('Resend failed');
-    } catch (e) { setError('Resend failed'); }
+    } catch (e: any) { console.error('resend error', e?.response?.data || e?.message || e); setError(e?.response?.data?.message || e?.message || 'Resend failed'); }
     finally { setLoading(false); }
   };
 
@@ -136,10 +152,9 @@ export default function Login() {
               className="w-full bg-slate-950 border border-white/10 rounded-3xl py-5 px-6 text-center text-4xl font-black tracking-[0.5em] text-blue-500 focus:ring-4 focus:ring-blue-600/20 outline-none transition-all"
               placeholder="000000" value={otp}
               onChange={(e: any) => setOtp(e.target.value.replace(/\D/g, ""))}
-              aria-label="One time password"
+                  
             />
           )}
-
           {step === 2 && (
             <div className="text-center text-sm text-slate-400 mt-2">
               <div>OTP sent to <strong className="text-white">{maskedPhone || phone}</strong></div>

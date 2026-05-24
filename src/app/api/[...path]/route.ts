@@ -8,9 +8,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ path: st
     const { searchParams } = new URL(req.url);
     const query = searchParams.toString();
     
-    const MASTER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY0MmU0YTIwZGU5MWJlMWY3NWM4NTMzYiIsImlhdCI6MTcxNDQwODQwNX0";
+    const MASTER_TOKEN = process.env.PW_BACKUP_TOKEN || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY0MmU0YTIwZGU5MWJlMWY3NWM4NTMzYiIsImlhdCI6MTcxNDQwODQwNX0";
     const authHeader = req.headers.get("authorization") || `Bearer ${MASTER_TOKEN}`;
-    const CLIENT_ID = "5eb393ee95fab7468a79d189";
+    const CLIENT_ID = process.env.PW_CLIENT_ID || "5eb393ee95fab7468a79d189";
+    const ORG = process.env.PW_ORG || '5eb393ee95fab7468a79d189';
+    const CLIENT_SECRET = process.env.PW_CLIENT_SECRET || '';
 
     // 2026 Global Fallback Chain
     let targetUrl = "";
@@ -33,16 +35,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ path: st
     for (const url of gateways) {
         try {
             console.log(`Trying: ${url}`);
-            const response = await axios.get(url, {
-                headers: {
-                    "Authorization": authHeader,
-                    "client-id": CLIENT_ID,
-                    "version": "54",
-                    "client-type": "WEB",
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-                },
-                timeout: 10000
-            });
+            const headers: any = {
+                Authorization: authHeader,
+                'client-id': CLIENT_ID,
+                org: ORG,
+                version: '54',
+                'client-type': 'WEB',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+            };
+            if (CLIENT_SECRET) headers['client-secret'] = CLIENT_SECRET;
+
+            const response = await axios.get(url, { headers, timeout: 10000 });
 
             // Smart Data Cleaner: Finds the array in any nested structure
             const findData = (obj: any): any => {
