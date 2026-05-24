@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
+import { CLIENT_ID, ORG, CLIENT_SECRET, API_BASE } from '../../../../lib/upstream';
 
 export async function POST(req: Request) {
   try {
@@ -15,11 +16,6 @@ export async function POST(req: Request) {
       const match = cookie.split(';').map(s => s.trim()).find(s => s.startsWith('pw_token='));
       if (match) token = match.split('=')[1];
     }
-    const API_BASE = process.env.PW_API_BASE || 'https://api.penpencil.co';
-    const ORG = process.env.PW_ORG || '5eb393ee95fab7468a79d189';
-    const CLIENT_ID = process.env.PW_CLIENT_ID || 'system-admin';
-    const CLIENT_SECRET = process.env.PW_CLIENT_SECRET || '';
-
     const headers: any = { 'client-id': CLIENT_ID, 'org': ORG, 'client-type': 'WEB' };
     if (CLIENT_SECRET) headers['client-secret'] = CLIENT_SECRET;
     if (!token) return NextResponse.json({ success: false, message: 'token required' }, { status: 400 });

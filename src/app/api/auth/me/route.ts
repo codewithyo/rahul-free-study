@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
+import { CLIENT_ID, ORG, CLIENT_SECRET, API_BASE } from '../../../../lib/upstream';
 
 export async function GET(req: Request) {
   try {
@@ -9,13 +10,8 @@ export async function GET(req: Request) {
 
     if (!token) return NextResponse.json({ success: false, message: 'Not authenticated' }, { status: 401 });
 
-    const API_BASE = process.env.PW_API_BASE || 'https://api.penpencil.co';
-
     // verify token with upstream
     try {
-      const CLIENT_ID = process.env.PW_CLIENT_ID || 'system-admin';
-      const ORG = process.env.PW_ORG || '5eb393ee95fab7468a79d189';
-      const CLIENT_SECRET = process.env.PW_CLIENT_SECRET || '';
       const headers: any = { 'client-id': CLIENT_ID, 'org': ORG, 'client-type': 'WEB' };
       if (CLIENT_SECRET) headers['client-secret'] = CLIENT_SECRET;
 

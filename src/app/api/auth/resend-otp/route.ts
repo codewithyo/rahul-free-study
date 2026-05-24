@@ -1,17 +1,13 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
+import { CLIENT_ID, ORG, CLIENT_SECRET, API_BASE } from '../../../../lib/upstream';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const phone = (body?.phone || body?.mobile || body?.msisdn || "").toString();
     const smsType = body?.smsType ?? 0;
-    const CLIENT_ID = process.env.PW_CLIENT_ID || 'system-admin';
-    const ORG = process.env.PW_ORG || '5eb393ee95fab7468a79d189';
-    const CLIENT_SECRET = process.env.PW_CLIENT_SECRET || '';
     if (!CLIENT_ID) return NextResponse.json({ success: false, message: 'Server misconfigured' }, { status: 500 });
-
-    const API_BASE = process.env.PW_API_BASE || 'https://api.penpencil.co';
 
     const headers: any = { 'client-id': CLIENT_ID, 'org': ORG, 'client-type': 'WEB' };
     if (CLIENT_SECRET) headers['client-secret'] = CLIENT_SECRET;

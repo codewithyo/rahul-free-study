@@ -59,7 +59,7 @@ export default function Login() {
       if (res.data.success) {
           try {
             // fetch user data from server (pw_token cookie should be set)
-            const me = await axios.get('/api/auth/me');
+            const me = await axios.get('/api/auth/me', { withCredentials: true });
             const user = me.data?.data || null;
             saveSession(phone, user, getRandomId());
           } catch (e: any) {
@@ -82,10 +82,10 @@ export default function Login() {
     if (!rawTokenInput) { setError('Paste access token'); return; }
     setLoading(true); setError('');
     try {
-      const res = await axios.post('/api/auth/token-login', { token: rawTokenInput });
+      const res = await axios.post('/api/auth/token-login', { token: rawTokenInput }, { withCredentials: true });
       if (res.data.success) {
           try {
-            const me = await axios.get('/api/auth/me');
+        const me = await axios.get('/api/auth/me', { withCredentials: true });
             const user = me.data?.data || null;
             // preserve mobile if we have it
             saveSession(phone || null, user, getRandomId());

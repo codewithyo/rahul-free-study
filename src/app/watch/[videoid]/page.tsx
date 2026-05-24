@@ -8,8 +8,8 @@ import Link from "next/link";
 
 export default function WatchPage({ params }: { params: Promise<{ videoid: string }> }) {
   const { videoid } = use(params);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoData, setVideoData] = useState<any>(null);
+  const videoRef = useRef(null as HTMLVideoElement | null);
+  const [videoData, setVideoData] = useState(null as any);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -49,9 +49,9 @@ export default function WatchPage({ params }: { params: Promise<{ videoid: strin
       if (Hls.isSupported()) {
         const hls = new Hls({
           // This allows Hls.js to handle custom headers for key fetching in 2026
-          xhrSetup: (xhr, url) => {
+          xhrSetup: (xhr: any, url: string) => {
             if (url.includes('get-key')) {
-              xhr.setRequestHeader('client-id', '5eb393ee95fab7468a79d189');
+              xhr.setRequestHeader('client-id', process.env.NEXT_PUBLIC_PW_CLIENT_ID || 'system-admin');
             }
           }
         });
