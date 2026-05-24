@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       const match = cookie.split(';').map(s => s.trim()).find(s => s.startsWith('pw_token='));
       if (match) token = match.split('=')[1];
     }
-    const headers: any = { 'client-id': CLIENT_ID, 'org': ORG, 'client-type': 'WEB' };
+    const headers: any = { 'client-id': CLIENT_ID, 'org': ORG, 'client-type': 'WEB', version: '54' };
     if (CLIENT_SECRET) headers['client-secret'] = CLIENT_SECRET;
     if (!token) return NextResponse.json({ success: false, message: 'token required' }, { status: 400 });
 

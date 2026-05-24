@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
     if (!token) return NextResponse.json({ success: false, message: 'token required' }, { status: 400 });
 
-    const headers: any = { 'client-id': CLIENT_ID, 'org': ORG, 'client-type': 'WEB' };
+    const headers: any = { 'client-id': CLIENT_ID, 'org': ORG, 'client-type': 'WEB', version: '54' };
     if (CLIENT_SECRET) headers['client-secret'] = CLIENT_SECRET;
 
     const res = await axios.post(`${API_BASE}/v3/oauth/verify-token`, { token }, { timeout: 8000, headers });

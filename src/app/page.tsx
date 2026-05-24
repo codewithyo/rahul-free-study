@@ -70,6 +70,8 @@ function OTPWidget() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [tokenId, setTokenId] = useState('');
+  const [mode, setMode] = useState('otp' as 'otp' | 'token');
+  const [rawToken, setRawToken] = useState('');
 
   const send = async (e?: any) => {
     e?.preventDefault();
@@ -107,17 +109,47 @@ function OTPWidget() {
     } finally { setLoading(false); }
   };
 
+  const tokenLogin = async (e?: any) => {
+    e?.preventDefault();
+    if (!rawToken) { setError('Paste access token'); return; }
+    setLoading(true); setError('');
+    try {
+      const res = await axios.post('/api/auth/token-login', { token: rawToken }, { withCredentials: true });
+      if (res.data?.success) {
+        try {
+          const me = await axios.get('/api/auth/me', { withCredentials: true });
+          const user = me.data?.data || null;
+          saveSession(null, user, getRandomId());
+        } catch {}
+        window.location.href = '/study';
+      } else setError(res.data?.message || 'Token invalid');
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || 'Failed');
+    } finally { setLoading(false); }
+  };
+
   return (
     <div className="bg-slate-900/60 p-6 rounded-2xl border border-slate-800">
-      {step === 1 ? (
-        <form onSubmit={send} className="flex gap-2">
-          <input value={phone} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="Phone" className="flex-1 px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" />
-          <button className="px-4 py-3 bg-blue-600 rounded-lg" disabled={loading}>{loading ? '...' : 'Send'}</button>
-        </form>
+      <div className="flex gap-2 mb-4">
+        <button onClick={() => setMode('otp')} className={`flex-1 py-2 rounded-lg ${mode==='otp'? 'bg-blue-600':'bg-slate-800'}`}>OTP</button>
+        <button onClick={() => setMode('token')} className={`flex-1 py-2 rounded-lg ${mode==='token'? 'bg-blue-600':'bg-slate-800'}`}>Token</button>
+      </div>
+      {mode === 'otp' ? (
+        (step === 1 ? (
+          <form onSubmit={send} className="flex gap-2">
+            <input value={phone} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="Phone" className="flex-1 px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" />
+            <button className="px-4 py-3 bg-blue-600 rounded-lg" disabled={loading}>{loading ? '...' : 'Send'}</button>
+          </form>
+        ) : (
+          <form onSubmit={verify} className="flex gap-2">
+            <input value={otp} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtp(e.target.value.replace(/\D/g, ''))} placeholder="OTP" className="flex-1 px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" />
+            <button className="px-4 py-3 bg-green-600 rounded-lg" disabled={loading}>{loading ? '...' : 'Verify'}</button>
+          </form>
+        ))
       ) : (
-        <form onSubmit={verify} className="flex gap-2">
-          <input value={otp} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtp(e.target.value.replace(/\D/g, ''))} placeholder="OTP" className="flex-1 px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" />
-          <button className="px-4 py-3 bg-green-600 rounded-lg" disabled={loading}>{loading ? '...' : 'Verify'}</button>
+        <form onSubmit={tokenLogin} className="flex gap-2">
+          <input value={rawToken} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRawToken(e.target.value)} placeholder="Paste access token" className="flex-1 px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" />
+          <button className="px-4 py-3 bg-indigo-600 rounded-lg" disabled={loading}>{loading ? '...' : 'Login'}</button>
         </form>
       )}
       {error && <div className="mt-3 text-red-400">{error}</div>}

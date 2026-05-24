@@ -9,13 +9,14 @@ export async function POST(req: Request) {
     const otp = body?.otp || body?.code || body?.pin || '';
     const username = body?.username || body?.mobile || body?.phone || null;
 
-    const headers: any = { 'Content-Type': 'application/json', 'client-id': CLIENT_ID, 'org': ORG, 'client-type': 'WEB' };
+    const headers: any = { 'Content-Type': 'application/json', 'client-id': CLIENT_ID, 'org': ORG, 'client-type': 'WEB', version: '54' };
     if (CLIENT_SECRET) headers['client-secret'] = CLIENT_SECRET;
 
     // Two supported verify flows:
     // 1) token-based: POST /v1/users/{token}/verify-otp  (frontend supplies token)
     // 2) oauth-style: POST /v3/oauth/token with username+otp to obtain access token
     let authToken: string | null = null;
+    let successMessage = '';
 
     if (token) {
       const response = await axios.post(
@@ -25,6 +26,8 @@ export async function POST(req: Request) {
       );
       // upstream may return token in several fields
       authToken = response.data?.data?.token || response.data?.token || response.data?.access_token || response.data?.data?.access_token || null;
+      // attach message
+      successMessage = response.data?.message || response.data?.data?.message || response.data?.msg || '';
     } else if (username) {
       // oauth token flow
       const payload = {
@@ -38,13 +41,14 @@ export async function POST(req: Request) {
       };
       const response = await axios.post(`${API_BASE}/v3/oauth/token`, payload, { headers });
       authToken = response.data?.data?.token || response.data?.token || response.data?.access_token || response.data?.data?.access_token || null;
+      successMessage = response.data?.message || response.data?.data?.message || response.data?.msg || '';
     } else {
       return NextResponse.json({ success: false, message: 'token or username required' }, { status: 400 });
     }
 
     if (!authToken) return NextResponse.json({ success: false, message: 'Invalid upstream response' }, { status: 500 });
 
-    const res = NextResponse.json({ success: true });
+    const res = NextResponse.json({ success: true, message: successMessage });
     res.cookies.set('pw_token', authToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
