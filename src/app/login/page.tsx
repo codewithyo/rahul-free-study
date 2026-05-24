@@ -12,6 +12,8 @@ export default function Login() {
   const [error, setError] = useState("");
   const [tokenId, setTokenId] = useState("");
   const [smsType, setSmsType] = useState(0);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [maskedPhone, setMaskedPhone] = useState("");
 
   const CLIENT_ID = process.env.NEXT_PUBLIC_PW_CLIENT_ID || "";
 
@@ -21,12 +23,22 @@ export default function Login() {
     setLoading(true); setError("");
 
     try {
-      const res = await axios.post(`/api/auth/get-otp`, { phone, smsType });
+      // Initial send uses default channel (server decides). smsType is only for resends.
+      const res = await axios.post(`/api/auth/get-otp`, { phone });
       if (res.data.success) {
         // prefer token field if provided
         const t = res.data.token || res.data.data?.data?.t || res.data.data?.t || null;
         if (t) setTokenId(t);
         setStep(2);
+        setResendTimer(30);
+        setMaskedPhone(phone.replace(/(\d{4})\d{3}(\d{3})/, "$1***$2"));
+        // countdown
+        const id = setInterval(() => {
+          setResendTimer((prev: number) => {
+            if (prev <= 1) { clearInterval(id); return 0; }
+            return prev - 1;
+          });
+        }, 1000);
       } else {
         setError(res.data.message || 'Failed to request OTP');
       }
@@ -56,11 +68,20 @@ export default function Login() {
   };
 
   const handleResend = async () => {
+    if (resendTimer > 0) return;
     setLoading(true); setError('');
     try {
       const res = await axios.post('/api/auth/resend-otp', { phone, smsType });
-      if (res.data.success) setError('OTP resent');
-      else setError('Resend failed');
+      if (res.data.success) {
+        setError('OTP resent');
+        setResendTimer(30);
+        const id = setInterval(() => {
+          setResendTimer((prev: number) => {
+            if (prev <= 1) { clearInterval(id); return 0; }
+            return prev - 1;
+          });
+        }, 1000);
+      } else setError('Resend failed');
     } catch (e) { setError('Resend failed'); }
     finally { setLoading(false); }
   };
@@ -72,8 +93,13 @@ export default function Login() {
           <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-600/30">
             {step === 1 ? <Phone className="w-10 h-10 text-white" /> : <Lock className="w-10 h-10 text-white" />}
           </div>
-          <h2 className="text-4xl font-black text-white mb-2">{step === 1 ? "Login" : "Verify"}</h2>
-          <p className="text-slate-400 font-bold">Connect your account</p>
+          <h2 className="text-4xl font-black text-white mb-2">{step === 1 ? "Login" : "Verify & Secure"}</h2>
+          <p className="text-slate-400 font-bold">Secure access using OTP — no password required</p>
+
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <div className={`w-3 h-3 rounded-full ${step===1? 'bg-blue-400':'bg-slate-700'}`}></div>
+            <div className={`w-3 h-3 rounded-full ${step===2? 'bg-blue-400':'bg-slate-700'}`}></div>
+          </div>
         </div>
 
         <form onSubmit={step === 1 ? handleSendOtp : handleVerifyOtp} className="space-y-6">
@@ -83,6 +109,7 @@ export default function Login() {
               className="w-full bg-slate-950 border border-white/10 rounded-3xl py-5 px-8 text-white font-bold text-xl focus:ring-4 focus:ring-blue-600/20 outline-none transition-all"
               placeholder="10-digit number" value={phone}
               onChange={(e: any) => setPhone(e.target.value.replace(/\D/g, ""))}
+              aria-label="Phone number"
             />
               ) : (
             <input
@@ -90,17 +117,25 @@ export default function Login() {
               className="w-full bg-slate-950 border border-white/10 rounded-3xl py-5 px-6 text-center text-4xl font-black tracking-[0.5em] text-blue-500 focus:ring-4 focus:ring-blue-600/20 outline-none transition-all"
               placeholder="000000" value={otp}
               onChange={(e: any) => setOtp(e.target.value.replace(/\D/g, ""))}
+              aria-label="One time password"
             />
           )}
 
-          {step === 1 && (
-            <div className="flex items-center gap-3 justify-center text-sm text-slate-400">
-              <label className={`p-2 rounded-xl ${smsType===0? 'bg-slate-800/40 text-white':'hover:bg-white/5'}`}>
-                <input type="radio" name="smsType" checked={smsType===0} onChange={() => setSmsType(0)} className="hidden" /> SMS
-              </label>
-              <label className={`p-2 rounded-xl ${smsType===1? 'bg-slate-800/40 text-white':'hover:bg-white/5'}`}>
-                <input type="radio" name="smsType" checked={smsType===1} onChange={() => setSmsType(1)} className="hidden" /> WhatsApp
-              </label>
+          {step === 2 && (
+            <div className="text-center text-sm text-slate-400 mt-2">
+              <div>OTP sent to <strong className="text-white">{maskedPhone || phone}</strong></div>
+              <div className="mt-2 flex items-center justify-center gap-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-400">Resend via:</span>
+                  <label className={`px-3 py-2 rounded-2xl cursor-pointer ${smsType===0? 'bg-slate-800/40 text-white':'hover:bg-white/5'}`}>
+                    <input type="radio" name="smsType" checked={smsType===0} onChange={() => setSmsType(0)} className="hidden" /> SMS
+                  </label>
+                  <label className={`px-3 py-2 rounded-2xl cursor-pointer ${smsType===1? 'bg-slate-800/40 text-white':'hover:bg-white/5'}`}>
+                    <input type="radio" name="smsType" checked={smsType===1} onChange={() => setSmsType(1)} className="hidden" /> WhatsApp
+                  </label>
+                </div>
+                <button type="button" onClick={handleResend} disabled={resendTimer>0 || loading} className="text-blue-400 underline ml-2">{resendTimer>0 ? `Retry in ${resendTimer}s` : 'Resend'}</button>
+              </div>
             </div>
           )}
 
