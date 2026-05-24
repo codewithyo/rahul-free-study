@@ -1,5 +1,8 @@
 import { ArrowRight, GraduationCap, PlayCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import axios from 'axios';
+import { useState } from 'react';
+import { saveSession, getRandomId } from '../lib/session';
 
 export default function Home() {
   return (
@@ -23,6 +26,10 @@ export default function Home() {
             <button className="w-full md:w-auto px-8 py-4 bg-slate-800 hover:bg-slate-700 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all">
               <PlayCircle className="w-5 h-5" /> Watch Demo
             </button>
+          </div>
+
+          <div className="mt-8 w-full max-w-md mx-auto">
+            <OTPWidget />
           </div>
         </div>
 
@@ -52,6 +59,68 @@ export default function Home() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function OTPWidget() {
+  const [phone, setPhone] = useState('');
+  const [step, setStep] = useState(1);
+  const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [tokenId, setTokenId] = useState('');
+
+  const send = async (e?: any) => {
+    e?.preventDefault();
+    if (phone.replace(/\D/g, '').length < 6) { setError('Enter phone'); return; }
+    setLoading(true); setError('');
+    try {
+      const res = await axios.post('/api/auth/get-otp', { phone });
+      if (res.data?.success) {
+        const t = res.data.token || res.data.data?.data?.t || res.data.data?.t || null;
+        if (t) setTokenId(t);
+        setStep(2);
+      } else setError(res.data?.message || 'Failed');
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || 'Failed');
+    } finally { setLoading(false); }
+  };
+
+  const verify = async (e?: any) => {
+    e?.preventDefault();
+    setLoading(true); setError('');
+    try {
+      const payload: any = { otp };
+      if (tokenId) payload.token = tokenId; else payload.username = phone;
+      const res = await axios.post('/api/auth/verify-otp', payload, { withCredentials: true });
+      if (res.data?.success) {
+        try {
+          const me = await axios.get('/api/auth/me', { withCredentials: true });
+          const user = me.data?.data || null;
+          saveSession(phone, user, getRandomId());
+        } catch {}
+        window.location.href = '/study';
+      } else setError(res.data?.message || 'Invalid OTP');
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || 'Failed');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="bg-slate-900/60 p-6 rounded-2xl border border-slate-800">
+      {step === 1 ? (
+        <form onSubmit={send} className="flex gap-2">
+          <input value={phone} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="Phone" className="flex-1 px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" />
+          <button className="px-4 py-3 bg-blue-600 rounded-lg" disabled={loading}>{loading ? '...' : 'Send'}</button>
+        </form>
+      ) : (
+        <form onSubmit={verify} className="flex gap-2">
+          <input value={otp} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtp(e.target.value.replace(/\D/g, ''))} placeholder="OTP" className="flex-1 px-4 py-3 rounded-lg bg-slate-800 border border-slate-700" />
+          <button className="px-4 py-3 bg-green-600 rounded-lg" disabled={loading}>{loading ? '...' : 'Verify'}</button>
+        </form>
+      )}
+      {error && <div className="mt-3 text-red-400">{error}</div>}
     </div>
   );
 }
