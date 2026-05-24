@@ -15,18 +15,27 @@ export default function WatchPage({ params }: { params: Promise<{ videoid: strin
 
   useEffect(() => {
     const fetchVideoDetails = async () => {
-      const token = localStorage.getItem("token");
       try {
-        // 2026 Latest Endpoint Logic
-        const res = await axios.get(`/api/v1/v2/lectures/get-video-details?videoId=${videoid}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setVideoData(res.data.data);
+        const res = await axios.get('/api/AllBatches');
+        if (res.data.success) {
+          const all: any[] = res.data.data || [];
+          // search for video by id across batches -> subjects -> lectures
+          let found: any = null;
+          for (const b of all) {
+            if (!b.subjects) continue;
+            for (const s of b.subjects) {
+              const lectures = s.lectures || s.contents || [];
+              const match = lectures.find((l: any) => String(l._id) === String(videoid));
+              if (match) { found = match; break; }
+            }
+            if (found) break;
+          }
+          if (found) setVideoData(found);
+          else setError(true);
+        } else setError(true);
       } catch (err) {
         setError(true);
-      } finally {
-        setLoading(false);
-      }
+      } finally { setLoading(false); }
     };
     fetchVideoDetails();
   }, [videoid]);

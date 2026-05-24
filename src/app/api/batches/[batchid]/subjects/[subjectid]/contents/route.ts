@@ -18,8 +18,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ batchid:
       `https://api.penpencil.co/v2/batches/${batchid}/subjects/${subjectid}/contents?contentType=${contentTypeMap[type]}&tag=all`,
       {
         headers: {
-          "Authorization": authHeader,
-          "Client-Id": "5eb393ee95fab7468a79d189",
+            "Authorization": authHeader,
+            "Client-Id": "5eb393ee95fab7468a79d189",
+            "client-type": "WEB",
         },
       }
     );

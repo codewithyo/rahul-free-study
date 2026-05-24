@@ -10,77 +10,59 @@ export default function Login() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [tokenId, setTokenId] = useState("");
+  const [smsType, setSmsType] = useState(0);
 
-  const CLIENT_ID = "5eb393ee95fab7468a79d189";
+  const CLIENT_ID = process.env.NEXT_PUBLIC_PW_CLIENT_ID || "";
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleSendOtp = async (e: any) => {
     e.preventDefault();
     if (phone.length !== 10) { setError("Enter 10 digit number"); return; }
     setLoading(true); setError("");
-    
-    try {
-      // 2026 Strategy: Direct fetch from user's IP (Bypasses Vercel Server Block)
-      const res = await axios.post(`https://api.penpencil.co/v2/users/login-otp`, {
-        phone: phone,
-        countryCode: "+91",
-        clientId: CLIENT_ID,
-        mode: "login"
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
-          "client-id": CLIENT_ID,
-          "version": "54"
-        }
-      });
 
-      if (res.data.success) { setStep(2); } 
-      else { setError(res.data.message || "Try again later"); }
-    } catch (err: any) {
-      console.log("Direct failed, trying proxy fallback...");
-      try {
-        const proxyRes = await axios.post(`/api/auth/login`, { phone });
-        if (proxyRes.data.success) { setStep(2); }
-        else { setError("Server busy. Use different number."); }
-      } catch (e) {
-        setError("PW Server Blocked. Try after 10 mins.");
+    try {
+      const res = await axios.post(`/api/auth/get-otp`, { phone, smsType });
+      if (res.data.success) {
+        // prefer token field if provided
+        const t = res.data.token || res.data.data?.data?.t || res.data.data?.t || null;
+        if (t) setTokenId(t);
+        setStep(2);
+      } else {
+        setError(res.data.message || 'Failed to request OTP');
       }
+    } catch (e: any) {
+      setError('Unable to request OTP at this time.');
     } finally { setLoading(false); }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: any) => {
     e.preventDefault();
     setLoading(true); setError("");
     try {
-      const res = await axios.post(`https://api.penpencil.co/v2/users/verify-otp`, {
-        phone: phone,
-        otp: otp,
-        countryCode: "+91",
-        clientId: CLIENT_ID,
-        mode: "login"
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "client-id": CLIENT_ID,
-          "version": "54"
-        }
-      });
+      // verify using tokenId if available
+      const payload: any = { otp };
+      if (tokenId) payload.token = tokenId;
 
+      const res = await axios.post(`/api/auth/verify-otp`, payload);
       if (res.data.success) {
-        localStorage.setItem("token", res.data.data.token);
-        window.location.href = "/study";
-      } else { setError("Wrong OTP"); }
-    } catch (err) {
-      try {
-        const proxyRes = await axios.post(`/api/auth/verify-otp`, { phone, otp });
-        if (proxyRes.data.success) {
-          localStorage.setItem("token", proxyRes.data.token);
-          window.location.href = "/study";
-        } else { setError("Invalid OTP code"); }
-      } catch (e) {
-        setError("Verification Failed");
+        // server sets cookie; redirect to study
+        window.location.href = '/study';
+      } else {
+        setError(res.data.message || 'Invalid OTP');
       }
+    } catch (e: any) {
+      setError('Verification failed');
     } finally { setLoading(false); }
+  };
+
+  const handleResend = async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await axios.post('/api/auth/resend-otp', { phone, smsType });
+      if (res.data.success) setError('OTP resent');
+      else setError('Resend failed');
+    } catch (e) { setError('Resend failed'); }
+    finally { setLoading(false); }
   };
 
   return (
@@ -100,18 +82,35 @@ export default function Login() {
               type="tel" maxLength={10} required
               className="w-full bg-slate-950 border border-white/10 rounded-3xl py-5 px-8 text-white font-bold text-xl focus:ring-4 focus:ring-blue-600/20 outline-none transition-all"
               placeholder="10-digit number" value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+              onChange={(e: any) => setPhone(e.target.value.replace(/\D/g, ""))}
             />
-          ) : (
+              ) : (
             <input
               type="text" maxLength={6} required
               className="w-full bg-slate-950 border border-white/10 rounded-3xl py-5 px-6 text-center text-4xl font-black tracking-[0.5em] text-blue-500 focus:ring-4 focus:ring-blue-600/20 outline-none transition-all"
               placeholder="000000" value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+              onChange={(e: any) => setOtp(e.target.value.replace(/\D/g, ""))}
             />
           )}
 
+          {step === 1 && (
+            <div className="flex items-center gap-3 justify-center text-sm text-slate-400">
+              <label className={`p-2 rounded-xl ${smsType===0? 'bg-slate-800/40 text-white':'hover:bg-white/5'}`}>
+                <input type="radio" name="smsType" checked={smsType===0} onChange={() => setSmsType(0)} className="hidden" /> SMS
+              </label>
+              <label className={`p-2 rounded-xl ${smsType===1? 'bg-slate-800/40 text-white':'hover:bg-white/5'}`}>
+                <input type="radio" name="smsType" checked={smsType===1} onChange={() => setSmsType(1)} className="hidden" /> WhatsApp
+              </label>
+            </div>
+          )}
+
           {error && <div className="text-red-500 text-center font-black bg-red-500/10 py-3 rounded-2xl border border-red-500/20">{error}</div>}
+          {step === 2 && (
+            <div className="flex items-center justify-between text-sm text-slate-400">
+              <button type="button" onClick={handleResend} className="text-blue-400 hover:underline">Resend OTP</button>
+              <div className="text-slate-500">Channel: {smsType===0? 'SMS' : 'WhatsApp'}</div>
+            </div>
+          )}
 
           <button
             type="submit" disabled={loading}

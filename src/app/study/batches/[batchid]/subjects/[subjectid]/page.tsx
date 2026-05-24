@@ -7,27 +7,27 @@ import Link from "next/link";
 
 export default function SubjectContent({ params }: { params: Promise<{ batchid: string; subjectid: string }> }) {
   const { batchid, subjectid } = use(params);
-  const [content, setContent] = useState<any[]>([]);
+  const [content, setContent] = useState([] as any[]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("lectures");
 
   useEffect(() => {
     const fetchContent = async () => {
-      const token = localStorage.getItem("token");
-      const contentTypeMap: any = { "lectures": "video", "notes": "notes", "dpp": "dpp" };
-      
       try {
-        // Updated to use universal proxy with full PW path
-        const res = await axios.get(
-          `/api/v1/v2/batches/${batchid}/subjects/${subjectid}/contents?contentType=${contentTypeMap[activeTab]}&tag=all`, 
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setContent(res.data.data || []);
+        const res = await axios.get('/api/AllBatches');
+        if (res.data.success) {
+          const batch = (res.data.data || []).find((b: any) => String(b._id) === String(batchid));
+          const subject = batch?.subjects?.find((s: any) => String(s._id) === String(subjectid));
+          if (!subject) { setContent([]); return; }
+
+          // map activeTab to subject content arrays
+          const map: any = { lectures: 'lectures', notes: 'notes', dpp: 'dpp' };
+          const list = subject[map[activeTab]] || subject.contents || [];
+          setContent(list || []);
+        }
       } catch (err) {
-        console.error("Failed to fetch content");
-      } finally {
-        setLoading(false);
-      }
+        console.error('Failed to fetch content');
+      } finally { setLoading(false); }
     };
     fetchContent();
   }, [batchid, subjectid, activeTab]);

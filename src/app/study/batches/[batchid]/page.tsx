@@ -13,18 +13,15 @@ export default function BatchDetails({ params }: { params: Promise<{ batchid: st
 
   useEffect(() => {
     const fetchBatchDetails = async () => {
-      const token = localStorage.getItem("token");
       try {
-        // Updated to use the new universal proxy path
-        const res = await axios.get(`/api/v1/v2/batches/info/${batchid}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setBatchData(res.data.data);
+        const res = await axios.get(`/api/AllBatches`);
+        if (res.data.success) {
+          const found = (res.data.data || []).find((b: any) => String(b._id) === String(batchid));
+          setBatchData(found || null);
+        }
       } catch (err) {
-        console.error("Failed to fetch batch details");
-      } finally {
-        setLoading(false);
-      }
+        console.error('Failed to fetch batch details');
+      } finally { setLoading(false); }
     };
     fetchBatchDetails();
   }, [batchid]);

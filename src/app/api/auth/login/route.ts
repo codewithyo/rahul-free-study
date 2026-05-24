@@ -4,10 +4,13 @@ import axios from "axios";
 export async function POST(req: Request) {
   try {
     const { phone } = await req.json();
-    const CLIENT_ID = "5eb393ee95fab7468a79d189";
+    const CLIENT_ID = process.env.PW_CLIENT_ID || "";
 
-    // 2026 Strategy: Direct call from INDIA REGION (bom1)
-    // No proxy needed if we are in India!
+    if (!CLIENT_ID) {
+      return NextResponse.json({ success: false, message: 'Server misconfigured' }, { status: 500 });
+    }
+
+    // Proxy the request to upstream using server-side client id
     const response = await axios.post(
       "https://api.penpencil.co/v1/users/login-otp",
       {
@@ -19,12 +22,11 @@ export async function POST(req: Request) {
       {
         headers: {
           "Content-Type": "application/json",
-          "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+          "User-Agent": "Server",
           "client-id": CLIENT_ID,
           "version": "54",
-          "origin": "https://www.physicswallah.live",
-          "referer": "https://www.physicswallah.live/"
-        }
+          "client-type": "WEB"
+        },
       }
     );
 
