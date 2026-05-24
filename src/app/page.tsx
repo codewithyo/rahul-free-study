@@ -17,7 +17,7 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-            <Link href="/study" className="w-full md:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all transform hover:scale-105 shadow-lg shadow-blue-500/25">
+            <Link href="/login" className="w-full md:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all transform hover:scale-105 shadow-lg shadow-blue-500/25">
               Get Started <ArrowRight className="w-5 h-5" />
             </Link>
             <button className="w-full md:w-auto px-8 py-4 bg-slate-800 hover:bg-slate-700 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all">

@@ -3,7 +3,9 @@ import axios from 'axios';
 
 export async function POST(req: Request) {
   try {
-    const { phone, smsType = 0 } = await req.json();
+    const body = await req.json();
+    const phone = (body?.phone || body?.mobile || body?.msisdn || "").toString();
+    const smsType = body?.smsType ?? 0;
     const CLIENT_ID = process.env.PW_CLIENT_ID || 'system-admin';
     const ORG = process.env.PW_ORG || '5eb393ee95fab7468a79d189';
     const CLIENT_SECRET = process.env.PW_CLIENT_SECRET || '';

@@ -3,7 +3,12 @@ import axios from 'axios';
 
 export async function POST(req: Request) {
   try {
-    const { phone, smsType = 0 } = await req.json();
+    const body = await req.json();
+    const phone = (body?.phone || body?.mobile || body?.msisdn || "").toString();
+    const smsType = body?.smsType ?? 0;
+    if (!phone || phone.replace(/\D/g, "").length < 6) {
+      return NextResponse.json({ success: false, message: 'phone is required' }, { status: 400 });
+    }
     const CLIENT_ID = process.env.PW_CLIENT_ID || 'system-admin';
     const ORG = process.env.PW_ORG || '5eb393ee95fab7468a79d189';
     const CLIENT_SECRET = process.env.PW_CLIENT_SECRET || '';
@@ -27,6 +32,7 @@ export async function POST(req: Request) {
     const tokenId = response.data?.data?.t || response.data?.data?.token || response.data?.token || null;
     return NextResponse.json({ success: true, data: response.data, token: tokenId });
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.response?.data?.message || 'Failed to get OTP' }, { status: 500 });
+    const msg = error?.response?.data || error?.message || 'Failed to get OTP';
+    return NextResponse.json({ success: false, message: typeof msg === 'string' ? msg : JSON.stringify(msg) }, { status: 500 });
   }
 }
