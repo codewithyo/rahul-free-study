@@ -11,6 +11,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [tokenId, setTokenId] = useState("");
+  const [rawTokenInput, setRawTokenInput] = useState("");
   const [smsType, setSmsType] = useState(0);
   const [resendTimer, setResendTimer] = useState(0);
   const [maskedPhone, setMaskedPhone] = useState("");
@@ -54,6 +55,7 @@ export default function Login() {
       // verify using tokenId if available
       const payload: any = { otp };
       if (tokenId) payload.token = tokenId;
+      else payload.username = phone; // support oauth-style verify by username when tokenId not provided
 
       const res = await axios.post(`/api/auth/verify-otp`, payload);
       if (res.data.success) {
@@ -64,6 +66,23 @@ export default function Login() {
       }
     } catch (e: any) {
       setError('Verification failed');
+    } finally { setLoading(false); }
+  };
+
+  const handleTokenLogin = async (e: any) => {
+    e.preventDefault();
+    if (!rawTokenInput) { setError('Paste access token'); return; }
+    setLoading(true); setError('');
+    try {
+      const res = await axios.post('/api/auth/token-login', { token: rawTokenInput });
+      if (res.data.success) {
+        // cookie set by server, redirect
+        window.location.href = '/study';
+      } else {
+        setError(res.data.message || 'Token invalid');
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || 'Token verification failed');
     } finally { setLoading(false); }
   };
 
